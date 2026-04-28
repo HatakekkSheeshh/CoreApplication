@@ -423,6 +423,17 @@ func (c *Client) GetAutoIndexStatus(ctx context.Context, contentID int64) (*Auto
 	return &resp, nil
 }
 
+// BatchGetAutoIndexStatus fetches index status for multiple content IDs
+// in a single round-trip. Returns a map keyed by content_id string.
+func (c *Client) BatchGetAutoIndexStatus(ctx context.Context, contentIDs []int64) (map[string]*AutoIndexStatus, error) {
+	body := map[string][]int64{"content_ids": contentIDs}
+	var resp map[string]*AutoIndexStatus
+	if err := c.post(ctx, "/ai/auto-index/batch-status", body, &resp); err != nil {
+		return nil, fmt.Errorf("ai.BatchGetAutoIndexStatus: %w", err)
+	}
+	return resp, nil
+}
+
 func (c *Client) GetNodeChunks(ctx context.Context, nodeID int64, limit int) ([]ChunkItem, error) {
     var resp []ChunkItem
     return resp, c.get(ctx, fmt.Sprintf("/ai/knowledge-nodes/%d/chunks?limit=%d", nodeID, limit), &resp)

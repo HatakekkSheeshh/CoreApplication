@@ -855,6 +855,55 @@ func (h *AIHandler) GetContentAutoIndexStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, dto.NewDataResponse(status))
 }
 
+// BatchGetContentAutoIndexStatus godoc
+// @Summary      Batch get auto-index status for multiple content items
+// @Description  Returns status for all requested content IDs in one round-trip.
+//
+//	Replaces N individual /ai-index-status calls to prevent rate limiting.
+//
+// @Tags         AI - Auto Index
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]interface{}
+// @Router       /content/batch-ai-index-status [post]
+func (h *AIHandler) BatchGetContentAutoIndexStatus(c *gin.Context) {
+	var body struct {
+		ContentIDs []int64 `json:"content_ids" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, dto.NewErrorResponse("invalid_request", err.Error()))
+		return
+	}
+
+	// Cap at 100 to prevent abuse
+	ids := body.ContentIDs
+	if len(ids) > 100 {
+		ids = ids[:100]
+	}
+
+	result, err := h.aiClient.BatchGetAutoIndexStatus(c.Request.Context(), ids)
+	if err != nil {
+		// Fallback: return basic status from LMS DB for each content
+		logger.Warn(fmt.Sprintf("Batch status from AI failed, falling back to DB: %s", err.Error()))
+		fallback := make(map[string]interface{})
+		for _, id := range ids {
+			dbStatus, _, dbErr := h.courseRepo.GetContentAIIndexStatus(c.Request.Context(), id)
+			if dbErr != nil {
+				dbStatus = "unindexed"
+			}
+			fallback[fmt.Sprintf("%d", id)] = map[string]interface{}{
+				"content_id": id,
+				"status":     dbStatus,
+			}
+		}
+		c.JSON(http.StatusOK, dto.NewDataResponse(fallback))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.NewDataResponse(result))
+}
+
 // GetCourseKnowledgeGraph godoc
 // @Summary      Get knowledge graph for a course
 // @Tags         AI - Auto Index

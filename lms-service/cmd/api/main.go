@@ -312,6 +312,7 @@ func main() {
 
 				content.POST("/:contentId/ai-index", aiHandler.TriggerContentAutoIndex)
 				content.GET("/:contentId/ai-index-status", aiHandler.GetContentAutoIndexStatus)
+				content.POST("/batch-ai-index-status", aiHandler.BatchGetContentAutoIndexStatus)
 			}
 
 			// ENROLLMENT MANAGEMENT

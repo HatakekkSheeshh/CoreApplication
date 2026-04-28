@@ -219,6 +219,68 @@ async def get_auto_index_status(content_id: int, request: Request):
     )
 
 
+class BatchStatusRequest(BaseModel):
+    content_ids: list[int]
+
+
+@router.post("/batch-status")
+async def batch_get_auto_index_status(body: BatchStatusRequest, request: Request):
+    """
+    Batch-fetch index status for multiple content IDs in ONE round-trip.
+    This replaces N individual /status calls, eliminating rate limiting
+    when a teacher has many documents being indexed simultaneously.
+    """
+    _verify(request)
+
+    ids = body.content_ids[:100]  # cap at 100 to prevent abuse
+    if not ids:
+        return {}
+
+    async with get_ai_conn() as conn:
+        # 1. Batch-fetch statuses
+        status_rows = await conn.fetch(
+            "SELECT content_id, status, error FROM content_index_status WHERE content_id = ANY($1)",
+            ids,
+        )
+        status_map = {r["content_id"]: dict(r) for r in status_rows}
+
+        # 2. Batch-fetch node counts
+        node_rows = await conn.fetch(
+            """SELECT source_content_id, COUNT(*) AS n
+               FROM knowledge_nodes
+               WHERE source_content_id = ANY($1)
+               GROUP BY source_content_id""",
+            ids,
+        )
+        node_map = {r["source_content_id"]: r["n"] for r in node_rows}
+
+        # 3. Batch-fetch chunk counts
+        chunk_rows = await conn.fetch(
+            """SELECT content_id, COUNT(*) AS n
+               FROM document_chunks
+               WHERE content_id = ANY($1) AND status = 'ready'
+               GROUP BY content_id""",
+            ids,
+        )
+        chunk_map = {r["content_id"]: r["n"] for r in chunk_rows}
+
+    progress_map = {"pending": 5, "processing": 50, "indexed": 100, "failed": 0}
+    result = {}
+    for cid in ids:
+        sd = status_map.get(cid)
+        st = sd["status"] if sd else "unindexed"
+        result[str(cid)] = {
+            "content_id": cid,
+            "status": st,
+            "nodes_created": node_map.get(cid, 0),
+            "chunks_created": chunk_map.get(cid, 0),
+            "progress": progress_map.get(st, 0),
+            "error": sd.get("error") if sd else None,
+        }
+
+    return result
+
+
 # ── Knowledge Graph endpoints ──────────────────────────────────────────────────
 
 @graph_router.get("/global")

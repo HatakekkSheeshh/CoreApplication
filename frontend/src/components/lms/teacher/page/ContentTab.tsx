@@ -27,6 +27,7 @@ import EditContentModal from "@/components/lms/teacher/EditContentModal";
 import BulkUploadModal from "@/components/lms/teacher/upload/BulkUploadModal";
 import { SectionModal } from "@/components/lms/teacher/SectionModal";
 import { AIIndexButton } from "@/components/lms/teacher/ai/AIIndexButton";
+import { AIIndexPollerProvider } from "@/hooks/useAIIndexPoller";
 import { GenerateMicroLessonsModal } from "@/components/lms/teacher/micro/GenerateMicroLessonsModal";
 import { MicroLessonsDrawer } from "@/components/lms/teacher/micro/MicroLessonsDrawer";
 import { MicroLessonHistoryModal } from "@/components/lms/teacher/micro/MicroLessonHistoryModal";
@@ -147,9 +148,21 @@ export function ContentTab({ courseId, sections, onSectionsChange }: ContentTabP
     } finally { setDeletingContent(null); }
   };
 
+  // ── onIndexed callback for the batch poller ─────────────────────────────────
+  const handleContentIndexed = useCallback((contentId: number) => {
+    // Find which section this content belongs to and reload it
+    for (const [sectionId, contents] of Object.entries(sectionContents)) {
+      if ((contents as Content[]).some(c => c.id === contentId)) {
+        reloadSectionContent(Number(sectionId));
+        break;
+      }
+    }
+  }, [sectionContents, reloadSectionContent]);
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
+    <AIIndexPollerProvider onIndexed={handleContentIndexed}>
     <div className="space-y-4">
       {/* Top action bar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -334,7 +347,6 @@ export function ContentTab({ courseId, sections, onSectionsChange }: ContentTabP
                                 contentType={c.type}
                                 filePath={c.metadata?.file_path || null}
                                 initialStatus={c.ai_index_status || "not_indexed"}
-                                onIndexed={() => reloadSectionContent(sec.id)}
                               />
                             </div>
 
@@ -494,5 +506,6 @@ export function ContentTab({ courseId, sections, onSectionsChange }: ContentTabP
         </div>
       )}
     </div>
+    </AIIndexPollerProvider>
   );
 }

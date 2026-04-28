@@ -56,6 +56,39 @@ _OCR_MAX_PAGES = 60
 # while staying under 4 MB per image.
 _OCR_RENDER_DPI = 200
 
+# A page with fewer "real" characters than this after stripping boilerplate
+# is considered too thin to be its own section and is merged forward.
+_PAGE_MIN_CONTENT_CHARS = 80
+
+# ── Boilerplate patterns stripped from pages before assessing content ────────
+_BOILERPLATE_RES = [
+    re.compile(r'\d+\s+Operating System Concepts.*?©\s*\d{4}', re.IGNORECASE),
+    re.compile(r'Silberschatz,?\s+Galvin\s+and\s+Gagne', re.IGNORECASE),
+    re.compile(r'©\s*\d{4}[^\n]*', re.IGNORECASE),
+    re.compile(r'^\s*\d{1,3}\s*$', re.MULTILINE),        # standalone page numbers
+    re.compile(r'All\s+rights?\s+reserved', re.IGNORECASE),
+    re.compile(r'BK\s+TP\.?HCM', re.IGNORECASE),
+    re.compile(r'Trường Đại học.*?TP\.?\s*HCM', re.IGNORECASE),
+]
+
+
+def _strip_boilerplate(text: str) -> str:
+    """Remove common academic boilerplate from page text."""
+    result = text
+    for pat in _BOILERPLATE_RES:
+        result = pat.sub('', result)
+    # Collapse resulting blank lines
+    result = re.sub(r'\n{3,}', '\n\n', result)
+    return result.strip()
+
+
+def _is_page_thin(page_md: str) -> bool:
+    """Return True if the page lacks substantive educational content."""
+    cleaned = _strip_boilerplate(page_md)
+    # Also strip markdown heading syntax for the count
+    cleaned = re.sub(r'^#{1,6}\s+', '', cleaned, flags=re.MULTILINE)
+    return len(cleaned) < _PAGE_MIN_CONTENT_CHARS
+
 
 @dataclass
 class ConvertedDocument:
@@ -169,17 +202,47 @@ async def _pdf_to_markdown(
                 pr.markdown = ocr_md
                 ocr_pages += 1
 
-    # ── Phase 3: assemble output ────────────────────────────────────────
+    # ── Phase 3: assemble output — skip/merge thin pages ─────────────────
+    # Thin pages (only copyright / page numbers) are merged into the next
+    # substantive page to prevent micro-fragment chunks.
     out_parts: list[str] = []
+    pending_thin: list[str] = []  # text from thin pages waiting to be merged
+    pending_images: list[ExtractedImage] = []
+
     for pr in page_results:
         if not pr.markdown.strip():
             continue
+
+        # Collect page images either way
+        page_imgs = images_by_page.get(pr.page_no, [])
+
+        if _is_page_thin(pr.markdown):
+            # Save thin page content for merging into the next real section
+            stripped = _strip_boilerplate(pr.markdown).strip()
+            if stripped:
+                pending_thin.append(stripped)
+            pending_images.extend(page_imgs)
+            continue
+
+        # This is a substantive page — emit it
         out_parts.append(f"\n\n## Trang {pr.page_no}\n\n")
+
+        # Prepend any accumulated thin-page text
+        if pending_thin:
+            out_parts.append("\n".join(pending_thin) + "\n\n")
+            pending_thin.clear()
+
         out_parts.append(pr.markdown.rstrip())
 
-        for img in images_by_page.get(pr.page_no, []):
+        # Emit images from this page + any pending thin-page images
+        for img in pending_images + page_imgs:
             alt = img.caption_hint or f"Hình minh họa trang {pr.page_no}"
             out_parts.append(f"\n\n![{alt}]({img.url})\n")
+        pending_images.clear()
+
+    # Flush any trailing thin pages (rare — last pages are usually thin)
+    if pending_thin:
+        out_parts.append("\n\n" + "\n".join(pending_thin))
 
     return ConvertedDocument(
         markdown="".join(out_parts).strip(),
