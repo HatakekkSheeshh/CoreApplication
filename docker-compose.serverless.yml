@@ -139,7 +139,7 @@ services:
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
-      CORS_ALLOWED_ORIGINS: https://bdc.hpcc.vn,http://localhost:3000
+      CORS_ALLOWED_ORIGINS: https://bdc.hpcc.vn,http://localhost:3000,https://bdcweb.vercel.app
       LOGGING_LEVEL_ROOT: ${LOG_LEVEL:-INFO}
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,metrics,prometheus
       MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: always
@@ -179,7 +179,7 @@ services:
       - "service.type=backend"
       - "service.name=auth-service"
       - "traefik.enable=true"
-      - "traefik.http.routers.backend.rule=Host(`bdc.hpcc.vn`) && PathPrefix(`/apiv1`)"
+      - "traefik.http.routers.backend.rule=Host(`bdcweb.vercel.app`) && PathPrefix(`/apiv1`)"
       - "traefik.http.services.backend.loadbalancer.server.port=8080"
 
   # Redis
@@ -308,7 +308,7 @@ services:
       - "service.type=backend"
       - "service.name=lms-service"
       - "traefik.enable=true"
-      - "traefik.http.routers.lms.rule=Host(`bdc.hpcc.vn`) && PathPrefix(`/lmsapiv1`)"
+      - "traefik.http.routers.lms.rule=Host(`bdcweb.vercel.app`) && PathPrefix(`/lmsapiv1`)"
       - "traefik.http.services.lms.loadbalancer.server.port=8081"
       - "traefik.http.services.lms.loadbalancer.responseTimeout=300s"
 

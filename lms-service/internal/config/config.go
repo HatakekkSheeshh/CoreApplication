@@ -212,6 +212,7 @@ func Load() (*Config, error) {
 					"http://localhost:8080",
 					"http://backend:8080",
 					"https://bdc.hpcc.vn",
+					"https://bdcweb.vercel.app",
 				}),
 			AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 			AllowedHeaders: []string{
