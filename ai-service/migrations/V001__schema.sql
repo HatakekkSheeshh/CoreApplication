@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS knowledge_node_relations (
     source_node_id BIGINT NOT NULL REFERENCES knowledge_nodes(id) ON DELETE CASCADE,
     target_node_id BIGINT NOT NULL REFERENCES knowledge_nodes(id) ON DELETE CASCADE,
     relation_type  VARCHAR(30) DEFAULT 'related'
-                       CHECK (relation_type IN ('prerequisite', 'related', 'extends')),
+                       CHECK (relation_type IN ('prerequisite', 'related', 'extends', 'equivalent', 'contrasts_with')),
     strength       FLOAT DEFAULT 1.0 CHECK (strength BETWEEN 0.0 AND 1.0),
     auto_generated BOOLEAN DEFAULT true,
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
