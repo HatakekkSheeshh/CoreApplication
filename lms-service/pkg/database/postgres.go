@@ -13,9 +13,15 @@ import (
 
 // NewPostgresDB creates a new PostgreSQL database connection
 func NewPostgresDB(cfg config.DatabaseConfig) (*sql.DB, error) {
-	// Build connection string
+	// Build connection string.
+	// binary_parameters=no forces lib/pq to use the simple query protocol instead
+	// of the extended (prepared-statement) protocol. Without this, lib/pq caches
+	// an unnamed prepared statement per connection; when the pool recycles a
+	// connection (ConnMaxLifetime / ConnMaxIdleTime) the server-side statement is
+	// gone but lib/pq still tries to execute it, producing the intermittent
+	// "unnamed prepared statement does not exist" (SQLSTATE 26000) error.
 	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s binary_parameters=no",
 		cfg.Host,
 		cfg.Port,
 		cfg.User,
