@@ -143,8 +143,8 @@ func (r *MicroLessonRepository) CreateLesson(ctx context.Context, lesson *models
 	}
 	err := r.db.QueryRowContext(ctx, query,
 		lesson.JobID, lesson.CourseID, lesson.SectionID, lesson.SourceContentID,
-		lesson.Title, lesson.Summary, lesson.Objectives, lesson.MarkdownContent,
-		lesson.EstimatedMinutes, lesson.OrderIndex, lesson.Status, lesson.NodeID, lesson.ImageURLs,
+		lesson.Title, lesson.Summary, string(lesson.Objectives), lesson.MarkdownContent,
+		lesson.EstimatedMinutes, lesson.OrderIndex, lesson.Status, lesson.NodeID, string(lesson.ImageURLs),
 		lesson.Language, lesson.CreatedBy,
 	).Scan(&lesson.ID, &lesson.CreatedAt, &lesson.UpdatedAt)
 	if err != nil {
@@ -237,7 +237,7 @@ func (r *MicroLessonRepository) UpdateLessonContent(
 		    updated_at = NOW()
 		WHERE id = $1
 	`
-	_, err := r.db.ExecContext(ctx, query, id, title, summary, objectives, markdown, estimatedMinutes, orderIndex)
+	_, err := r.db.ExecContext(ctx, query, id, title, summary, string(objectives), markdown, estimatedMinutes, orderIndex)
 	return err
 }
 

@@ -424,7 +424,7 @@ func (r *CourseRepository) CreateContent(ctx context.Context, content *models.Se
 		content.Title,
 		content.Description,
 		content.OrderIndex,
-		content.Metadata,
+		string(content.Metadata),
 		content.IsPublished,
 		content.IsMandatory,
 		content.CreatedBy,

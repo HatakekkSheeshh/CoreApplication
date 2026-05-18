@@ -36,7 +36,7 @@ func (r *MicroInteractionRepository) Insert(ctx context.Context, m *models.Micro
 	}
 	if err := r.db.QueryRowContext(ctx, q,
 		m.UserID, m.CourseID, m.LessonID, m.NodeID,
-		m.ActionType, m.Score, m.Status, m.Payload,
+		m.ActionType, m.Score, m.Status, string(m.Payload),
 	).Scan(&m.ID, &m.CreatedAt); err != nil {
 		return nil, fmt.Errorf("insert micro_lesson_interactions: %w", err)
 	}
