@@ -152,6 +152,11 @@ type CreateQuestionRequest struct {
 	CorrectAnswers []CreateCorrectAnswerRequest `json:"correct_answers"`
 }
 
+// BatchCreateQuestionsRequest represents request to create multiple questions at once
+type BatchCreateQuestionsRequest struct {
+	Questions []CreateQuestionRequest `json:"questions" binding:"required,min=1"`
+}
+
 // UpdateQuestionRequest represents request to update a question
 type UpdateQuestionRequest struct {
 	QuestionText   *string                 `json:"question_text"`

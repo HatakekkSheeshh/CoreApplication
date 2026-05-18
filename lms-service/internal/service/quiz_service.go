@@ -320,6 +320,36 @@ func (s *QuizService) CreateQuestion(ctx context.Context, req *dto.CreateQuestio
 	return s.buildQuestionResponse(questionWithOptions), nil
 }
 
+// BatchCreateQuestions creates multiple questions in a single request
+func (s *QuizService) BatchCreateQuestions(ctx context.Context, quizID int64, reqs []dto.CreateQuestionRequest, userID int64, userRole string) ([]*dto.QuestionResponse, error) {
+	// Verify quiz ownership once for the batch
+	if err := s.verifyQuizOwnership(ctx, quizID, userID, userRole); err != nil {
+		return nil, err
+	}
+
+	var createdQuestions []*dto.QuestionResponse
+
+	for i := range reqs {
+		// Ensure QuizID matches
+		reqs[i].QuizID = quizID
+		
+		// Create question
+		question, err := s.CreateQuestion(ctx, &reqs[i], userID, userRole)
+		if err != nil {
+			// Note: since we iterate over CreateQuestion, if one fails midway, 
+			// the previous ones are already committed. In a real-world scenario, 
+			// we'd want a single transaction for the whole batch, but since this
+			// uses the existing service method, partial success might happen.
+			// Returning what we created so far and the error.
+			return createdQuestions, fmt.Errorf("failed to create question at index %d: %w", i, err)
+		}
+		
+		createdQuestions = append(createdQuestions, question)
+	}
+
+	return createdQuestions, nil
+}
+
 // UpdateQuestion updates question details
 func (s *QuizService) UpdateQuestion(ctx context.Context, questionID int64, req *dto.UpdateQuestionRequest, userID int64, userRole string) (*dto.QuestionResponse, error) {
 	question, err := s.quizRepo.GetQuestion(ctx, questionID)
