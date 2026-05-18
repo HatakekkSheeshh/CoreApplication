@@ -314,7 +314,7 @@ func (r *QuizRepository) CreateQuestion(ctx context.Context, question *models.Qu
 		ctx, query,
 		question.QuizID, question.QuestionType, question.QuestionText,
 		question.QuestionHTML, question.Explanation, question.Points,
-		question.OrderIndex, question.Settings, question.IsRequired,
+		question.OrderIndex, string(question.Settings), question.IsRequired,
 		question.NodeID, question.BloomLevel, question.ReferenceChunkID,
 	).Scan(&question.ID, &question.CreatedAt, &question.UpdatedAt)
 
@@ -396,7 +396,7 @@ func (r *QuizRepository) UpdateQuestion(ctx context.Context, question *models.Qu
 	err := r.db.QueryRowContext(
 		ctx, query,
 		question.QuestionText, question.QuestionHTML, question.Explanation,
-		question.Points, question.OrderIndex, question.Settings, question.IsRequired,
+		question.Points, question.OrderIndex, string(question.Settings), question.IsRequired,
 		question.NodeID, question.BloomLevel, question.ReferenceChunkID,
 		question.ID,
 	).Scan(&question.UpdatedAt)
@@ -904,7 +904,7 @@ func (r *QuizRepository) CreateStudentAnswer(ctx context.Context, answer *models
 
 	err := r.db.QueryRowContext(
 		ctx, query,
-		answer.AttemptID, answer.QuestionID, answer.AnswerData, answer.TimeSpentSeconds,
+		answer.AttemptID, answer.QuestionID, string(answer.AnswerData), answer.TimeSpentSeconds,
 	).Scan(&answer.ID, &answer.AnsweredAt, &answer.CreatedAt, &answer.UpdatedAt)
 
 	return err
@@ -986,7 +986,7 @@ func (r *QuizRepository) UpdateStudentAnswer(ctx context.Context, answer *models
 
 	err := r.db.QueryRowContext(
 		ctx, query,
-		answer.AnswerData, answer.PointsEarned, answer.IsCorrect,
+		string(answer.AnswerData), answer.PointsEarned, answer.IsCorrect,
 		answer.GraderFeedback, answer.GradedBy, answer.GradedAt,
 		answer.ID,
 	).Scan(&answer.UpdatedAt)

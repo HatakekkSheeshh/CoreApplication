@@ -427,6 +427,7 @@ func main() {
 
 				// Question Management
 				quizzes.POST("/:quizId/questions", quizHandler.CreateQuestion)
+				quizzes.POST("/:quizId/questions/batch", quizHandler.BatchCreateQuestions)
 				quizzes.GET("/:quizId/questions", quizHandler.ListQuestions)
 
 				// Student - Take Quiz

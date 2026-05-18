@@ -216,6 +216,46 @@ func (h *QuizHandler) CreateQuestion(c *gin.Context) {
 	c.JSON(http.StatusCreated, dto.NewDataResponse(question))
 }
 
+// BatchCreateQuestions godoc
+// @Summary Batch create questions
+// @Description Create multiple new questions for a quiz at once (teacher/admin only)
+// @Tags Quiz - Teacher
+// @Accept json
+// @Produce json
+// @Param quizId path int true "Quiz ID"
+// @Param request body dto.BatchCreateQuestionsRequest true "Batch Questions data"
+// @Security BearerAuth
+// @Success 201 {object} dto.SuccessResponse{data=[]dto.QuestionResponse} "Questions created successfully"
+// @Failure 400 {object} dto.ErrorResponse "Invalid request or validation error"
+// @Failure 401 {object} dto.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dto.ErrorResponse "Forbidden - not quiz owner"
+// @Router /quizzes/{quizId}/questions/batch [post]
+func (h *QuizHandler) BatchCreateQuestions(c *gin.Context) {
+	userID, _ := c.Get("user_id")
+	userRole, _ := c.Get("user_role")
+
+	quizID, err := strconv.ParseInt(c.Param("quizId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, dto.NewErrorResponse("invalid_quiz_id", "Invalid quiz ID"))
+		return
+	}
+
+	var req dto.BatchCreateQuestionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.NewErrorResponse("invalid_request", err.Error()))
+		return
+	}
+
+	questions, err := h.quizService.BatchCreateQuestions(c.Request.Context(), quizID, req.Questions, userID.(int64), userRole.(string))
+	if err != nil {
+		logger.Error("Failed to batch create questions", err)
+		c.JSON(http.StatusBadRequest, dto.NewErrorResponse("batch_creation_failed", err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusCreated, dto.NewDataResponse(questions))
+}
+
 // UpdateQuestion godoc
 // @Summary Update question
 // @Description Update question details (teacher/admin only)

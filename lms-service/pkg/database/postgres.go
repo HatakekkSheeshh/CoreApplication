@@ -7,21 +7,18 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"example/hello/internal/config"
 )
 
 // NewPostgresDB creates a new PostgreSQL database connection
 func NewPostgresDB(cfg config.DatabaseConfig) (*sql.DB, error) {
 	// Build connection string.
-	// binary_parameters=no forces lib/pq to use the simple query protocol instead
-	// of the extended (prepared-statement) protocol. Without this, lib/pq caches
-	// an unnamed prepared statement per connection; when the pool recycles a
-	// connection (ConnMaxLifetime / ConnMaxIdleTime) the server-side statement is
-	// gone but lib/pq still tries to execute it, producing the intermittent
-	// "unnamed prepared statement does not exist" (SQLSTATE 26000) error.
+	// We use pgx driver and set default_query_exec_mode=simple_protocol
+	// to avoid "bind message supplies X parameters" and "unnamed prepared statement does not exist"
+	// errors when running behind PgBouncer in transaction pooling mode.
 	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s binary_parameters=no",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s default_query_exec_mode=simple_protocol",
 		cfg.Host,
 		cfg.Port,
 		cfg.User,
@@ -31,7 +28,7 @@ func NewPostgresDB(cfg config.DatabaseConfig) (*sql.DB, error) {
 	)
 
 	// Open database connection
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
